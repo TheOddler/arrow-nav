@@ -103,7 +103,7 @@
       ) return;
 
       // Remember closest element
-      const dist = distance(curPos, point) / Math.cos(a * 1.2); // Scale by the angle so that we prefer elements in the direction
+      const dist = distance(curPos, point) / Math.cos(a * 1.8); // Scale by the angle so that we prefer elements in the direction
       if (dist < minDistance) {
         minDistance = dist;
         targetElement = element;
