@@ -1,0 +1,19 @@
+{
+  "manifest_version": 2,
+  "name": "Arrow Nav",
+  "version": "1.0",
+  "description": "Tries to make all websites navigable with the arrow keys.",
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "arrow-nav.js"
+      ],
+      "css": [
+        "arrow-nav.css"
+      ]
+    }
+  ]
+}
