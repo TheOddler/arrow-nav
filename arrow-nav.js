@@ -60,6 +60,11 @@
     }
   };
 
+  let mousePos = { x: 0, y: 0 };
+  document.addEventListener('mousemove', (event) => {
+    mousePos = { x: event.clientX, y: event.clientY };
+  });
+
   const getFocusableElements = () => {
     return Array.from(document.querySelectorAll(
       'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex], [contenteditable], audio[controls], video[controls], summary'
@@ -70,15 +75,14 @@
    * @param {Direction} direction
   */
   const moveFocus = (direction) => {
-    const currentElement = document.activeElement;
     const focusableElements = getFocusableElements();
     if (focusableElements.length === 0) return;
-    if (!currentElement) {
-      focusableElements[0].focus();
-      return;
-    }
 
-    const curPos = getMiddle(currentElement);
+    const currentElement = document.activeElement;
+    const curPos =
+      focusableElements.includes(currentElement)
+        ? getMiddle(currentElement)
+        : mousePos;
     const wantedAngle = dirToAngle(direction);
 
     /** @type {Element | null} */
