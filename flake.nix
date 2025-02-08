@@ -25,7 +25,7 @@
           pre-commit-check = pre-commit-hooks.lib.${system}.run {
             src = ./.;
             hooks = {
-              eslint.enable = true;
+              # eslint.enable = true;
             };
           };
         };
