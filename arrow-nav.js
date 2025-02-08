@@ -392,6 +392,12 @@
 
   // The loop that animates our highlighting element to the target element
   const loop = () => {
+    if (targetElement != document.activeElement) {
+      prevTargetElement = targetElement;
+      targetElement = document.activeElement;
+      targetChangeTime = Date.now();
+    }
+
     const animationTime = 300;
     const lerpPos = easeOut(Math.min(1, (Date.now() - targetChangeTime) / animationTime));
 
@@ -414,19 +420,4 @@
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
-
-  // Listen to the relevant events
-  document.addEventListener("focusout", (event) => {
-    prevTargetElement = event.target;
-    targetElement = null;
-    targetChangeTime = Date.now();
-  });
-
-  document.addEventListener("focusin", (event) => {
-    // Don't use `prevTargetElement = targetElement` here as the focusout event
-    // will have changes those values and we want to overwrite that here
-    prevTargetElement = event.relatedTarget;
-    targetElement = event.target;
-    targetChangeTime = Date.now();
-  });
 })();
