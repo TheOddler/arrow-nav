@@ -28,17 +28,17 @@
     );
     const middleA = getMiddle(rectA);
     const middleB = getMiddle(rectB);
-    const angle = getAngle(middleA, middleB);
+    const midAngle = getAngle(middleA, middleB);
 
     // Check for overlap
     if (areAlignedVertically && areAlignedHorizontally) {
       return {
         distance: 0,
         areAligned: true,
-        angle,
+        midAngle,
         // Not sure what the minAngle should be here, but for the rest of the
         // code just using angle here is OK.
-        minAngle: angle,
+        minAngle: midAngle,
       };
     }
 
@@ -50,7 +50,7 @@
           Math.abs(rectA.bottom - rectB.top)
         ),
         areAligned: true,
-        angle,
+        midAngle,
         minAngle: rectA.top < rectB.bottom ? Math.PI / 2 : Math.PI * 3 / 2,
       };
     }
@@ -62,7 +62,7 @@
           Math.abs(rectA.right - rectB.left)
         ),
         areAligned: true,
-        angle,
+        midAngle,
         minAngle: rectA.left < rectB.right ? 0 : Math.PI,
       };
     }
@@ -75,12 +75,12 @@
       // two rects. But for now this is fine and works well enough.
       distance: Math.hypot(middleA.x - middleB.x, middleA.y - middleB.y),
       areAligned: false,
-      angle,
+      midAngle,
       // Like above, not sure what the minAngle should be here, but angle works
       // with the rest of the code just fine, but we might want to consider
       // actually calculating the angle of the shortest line between the two
       // rects.
-      minAngle: angle,
+      minAngle: midAngle,
     };
   };
 
@@ -144,67 +144,76 @@
 
     const curRect = currentElement.getBoundingClientRect();
     const wantedAngle = dirToAngle(direction);
-    let targetElement = null;
-    let minDistance = Infinity;
-    let minAngle = Infinity;
-    let minIsAligned = false;
 
-    focusableElements.forEach((element) => {
-      if (element === currentElement) return;
+    const elements = focusableElements
+      // Remove the current element, as we don't want to move to that
+      .filter((element) => element != currentElement)
+      // Remove invisible elements
+      .filter((element) => {
+        return element.checkVisibility({
+          contentVisibilityAuto: true,
+          opacityProperty: true,
+          visibilityProperty: true,
+        })
+      })
+      // Get the distance infos for each element
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        return { element, rect, ...getRectDiff(curRect, rect) };
+      })
+      // Remove elements that are outside the direction code
+      .filter((info) => {
+        const maxAngle = Math.PI / 4;
+        // Use minAngle here, as midAngle might give wrong results
+        const angleDiff = getAngleDiff(info.minAngle, wantedAngle);
+        return angleDiff <= maxAngle;
+      })
+      // Remove off-screen elements, but allow those that are aligned
+      .filter((info) => {
+        if (info.areAligned) return true;
 
-      // Some values we'll use later
-      const rect = element.getBoundingClientRect();
-      const diff = getRectDiff(curRect, rect);
+        const allowedOffScreen = 0.2;
+        const scrWidth = window.innerWidth;
+        const scrHeight = window.innerHeight;
+        const isOffScreen =
+          info.rect.right < -scrWidth * allowedOffScreen
+          || info.rect.left > scrWidth + scrWidth * allowedOffScreen
+          || info.rect.bottom < -scrHeight * allowedOffScreen
+          || info.rect.top > scrHeight + scrHeight * allowedOffScreen;
+        return !isOffScreen;
+      })
+      // Sort them by preferred order
+      .sort((a, b) => {
+        const aSmallest = -1;
+        const bSmallest = 1;
+        // Prefer aligned elements
+        if (a.areAligned && !b.areAligned) return aSmallest;
+        if (!a.areAligned && b.areAligned) return bSmallest;
+        // Prefer closer elements
+        if (a.distance < b.distance) return aSmallest;
+        if (b.distance < a.distance) return bSmallest;
+        // Prefer elements with smaller angles
+        // Use mid-angle here, as the minAngle for aligned elements are often the same
+        const aAngle = getAngleDiff(a.midAngle, wantedAngle);
+        const bAngle = getAngleDiff(a.midAngle, wantedAngle);
+        if (aAngle < bAngle) return aSmallest;
+        if (bAngle < aAngle) return bSmallest;
+        // If all is the same, they are the same
+        return 0;
+      });
+    ;
 
-      // Only consider elements that are in the direction of the arrow key
-      // Use the min-angle so we don't overly-eagerly ignore elements
-      const maxAngle = Math.PI / 4;
-      if (getAngleDiff(diff.minAngle, wantedAngle) > maxAngle) return;
-
-      // Some more values we'll need
-      const allowedOffScreen = 0.2;
-      const isOffScreen = (rect.right < -window.innerWidth * allowedOffScreen
-        || rect.left > window.innerWidth * (1 + allowedOffScreen)
-        || rect.bottom < -window.innerHeight * allowedOffScreen
-        || rect.top > window.innerHeight * (1 + allowedOffScreen)
-      );
-
-      // Ignore elements too far off screen and not aligned
-      if (!diff.areAligned && isOffScreen) return;
-
-      // Remember closest element
-      const angle = getAngleDiff(diff.angle, wantedAngle);
-      // First prefer aligned elements, regardless of distance
-      if (minIsAligned && !diff.areAligned) return;
-      if (!minIsAligned && diff.isAligned) {
-        targetElement = element;
-        minDistance = diff.distance;
-        minAngle = angle;
-        minIsAligned = true;
-        return;
-      }
-      // Then prefer closer elements
-      if (diff.distance < minDistance) {
-        targetElement = element;
-        minDistance = diff.distance;
-        minAngle = angle;
-        minIsAligned = diff.areAligned;
-        return;
-      }
-      // Prefer smaller angles, allow a few pixels of tolerance
-      const tolerance = 5;
-      if (diff.distance <= minDistance + tolerance && angle < minAngle) {
-        targetElement = element;
-        minDistance = Math.min(minDistance, diff.distance);
-        minAngle = angle;
-        minIsAligned = diff.areAligned;
-        return;
-      }
+    // Focus the first element that is willing to be focussed
+    const focussed = elements.find((info) => {
+      info.element.focus({
+        preventScroll: true // We'll do that smoothly next
+      });
+      // Sometimes elements can't be focused for whatever reason, and then `focus()` just silently fails.
+      // To allow this, we return wether the call succeeded, if not it'll try the next element.
+      return info.element === document.activeElement;
     });
-
-    if (targetElement) {
-      targetElement.focus();
-      targetElement.scrollIntoView({
+    if (focussed) {
+      focussed.element.scrollIntoView({
         behavior: "smooth",
         block: "center",
         inline: "center",
