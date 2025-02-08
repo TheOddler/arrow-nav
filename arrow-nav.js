@@ -12,39 +12,6 @@
   /** @typedef {'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight'} Direction */
 
   /**
-   * @param {Element} element
-  */
-  const hasFixedPosition = (element) => {
-    while (element) {
-      if (window.getComputedStyle(element).position === 'fixed') {
-        return true;
-      }
-      element = element.parentElement;
-    }
-    return false;
-  };
-
-  /**
-   * @param {Element} element
-  */
-  const getRect = (element) => {
-    let rect = element.getBoundingClientRect();
-    if (hasFixedPosition(element)) {
-      // Pretend a fixed-position element is not really fixed pos, so we only
-      // really consider it when we haven't scrolled
-      rect = {
-        top: rect.top - window.scrollY,
-        right: rect.right - window.scrollX,
-        bottom: rect.bottom - window.scrollY,
-        left: rect.left - window.scrollX,
-        width: rect.width,
-        height: rect.height,
-      };
-    }
-    return rect;
-  };
-
-  /**
    * @param {DOMRect} rectA
    * @param {DOMRect} rectB
   */
@@ -175,7 +142,7 @@
       return;
     }
 
-    const curRect = getRect(currentElement);
+    const curRect = currentElement.getBoundingClientRect();
     const wantedAngle = dirToAngle(direction);
     let targetElement = null;
     let minDistance = Infinity;
@@ -186,7 +153,7 @@
       if (element === currentElement) return;
 
       // Some values we'll use later
-      const rect = getRect(element);
+      const rect = element.getBoundingClientRect();
       const diff = getRectDiff(curRect, rect);
 
       // Only consider elements that are in the direction of the arrow key
