@@ -108,22 +108,6 @@
     return Math.abs(angle);
   };
 
-  /**
-   * @param {Direction} direction
-  */
-  const dirToAngle = (direction) => {
-    switch (direction) {
-      case 'ArrowUp':
-        return Math.PI * 3 / 2;
-      case 'ArrowDown':
-        return Math.PI / 2;
-      case 'ArrowLeft':
-        return Math.PI;
-      case 'ArrowRight':
-        return 0;
-    }
-  };
-
   const getFocusableElements = () => {
     return Array.from(document.querySelectorAll(
       'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex], [contenteditable], audio[controls], video[controls], summary'
@@ -131,9 +115,9 @@
   };
 
   /**
-   * @param {Direction} direction
+   * @param {Number} moveAngle
   */
-  const moveFocus = (direction) => {
+  const moveFocus = (moveAngle) => {
     const currentElement = document.activeElement;
     const focusableElements = getFocusableElements();
     if (focusableElements.length === 0) return;
@@ -143,7 +127,6 @@
     }
 
     const curRect = currentElement.getBoundingClientRect();
-    const wantedAngle = dirToAngle(direction);
 
     const elements = focusableElements
       // Remove the current element, as we don't want to move to that
@@ -165,7 +148,7 @@
       .filter((info) => {
         const maxAngle = Math.PI / 4;
         // Use minAngle here, as midAngle might give wrong results
-        const angleDiff = getAngleDiff(info.minAngle, wantedAngle);
+        const angleDiff = getAngleDiff(info.minAngle, moveAngle);
         return angleDiff <= maxAngle;
       })
       // Remove off-screen elements, but allow those that are aligned
@@ -194,8 +177,8 @@
         if (b.distance < a.distance) return bSmallest;
         // Prefer elements with smaller angles
         // Use mid-angle here, as the minAngle for aligned elements are often the same
-        const aAngle = getAngleDiff(a.midAngle, wantedAngle);
-        const bAngle = getAngleDiff(a.midAngle, wantedAngle);
+        const aAngle = getAngleDiff(a.midAngle, moveAngle);
+        const bAngle = getAngleDiff(a.midAngle, moveAngle);
         if (aAngle < bAngle) return aSmallest;
         if (bAngle < aAngle) return bSmallest;
         // If all is the same, they are the same
@@ -221,39 +204,57 @@
     }
   };
 
+  /**
+   * @param {string} key
+  */
+  const keyToAngle = (key) => {
+    switch (key) {
+      case 'ArrowUp':
+        return Math.PI * 3 / 2;
+      case 'ArrowDown':
+        return Math.PI / 2;
+      case 'ArrowLeft':
+        return Math.PI;
+      case 'ArrowRight':
+        return 0;
+      case 'w':
+        return Math.PI * 3 / 2;
+      case 's':
+        return Math.PI / 2;
+      case 'a':
+        return Math.PI;
+      case 'd':
+        return 0;
+      default:
+        null;
+    }
+  };
+
   let lastEventTime = 0; // To slow down repeat rate, but still allow key spamming
   document.addEventListener('keydown', (event) => {
-    switch (event.key) {
-      case 'ArrowUp':
-      case 'ArrowDown':
-      case 'ArrowLeft':
-      case 'ArrowRight':
-        // Limit the repeat rate
-        if (Date.now() - lastEventTime > 100) {
-          moveFocus(event.key);
-          lastEventTime = Date.now();
-        }
-        // Prevent default (that is scrolling),
-        // as we scroll to the selected element
-        event.preventDefault();
-        break;
-      // Allow going back with the backspace key for better keyboard navigation
-      case 'Backspace':
-        history.back();
-        event.preventDefault();
-        break;
+    const angle = keyToAngle(event.key);
+    if (angle !== null) {
+      // Limit the repeat rate
+      if (Date.now() - lastEventTime > 100) {
+        moveFocus(angle);
+        lastEventTime = Date.now();
+      }
+      // Prevent default (that is scrolling),
+      // as we scroll to the selected element
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    } else if (event.key == 'Backspace') {
+      history.back();
+      event.preventDefault();
+      event.stopImmediatePropagation();
     }
   });
   document.addEventListener('keyup', (event) => {
-    switch (event.key) {
-      case 'ArrowUp':
-      case 'ArrowDown':
-      case 'ArrowLeft':
-      case 'ArrowRight':
-        // Allow spamming by resetting the time
-        lastEventTime = 0;
-        event.preventDefault();
-        break;
+    const angle = keyToAngle(event.key);
+    if (angle !== null) {
+      // Allow spamming by resetting the time
+      lastEventTime = 0;
+      event.preventDefault();
     }
   });
 })();
