@@ -386,9 +386,14 @@
   /** @type {HTMLElement | null} */
   let prevTargetElement = null;
   let targetChangeTime = Date.now();
-  const highlightingElement = document.createElement('div');
-  highlightingElement.id = 'highlighting-element';
-  document.body.appendChild(highlightingElement);
+
+  const highlightingId = 'highlighting-element';
+  const highlightingElement = document.getElementById(highlightingId);
+  if (!highlightingElement) {
+    highlightingElement = document.createElement('div');
+    highlightingElement.id = 'highlighting-element';
+    document.body.appendChild(highlightingElement);
+  }
 
   // The loop that animates our highlighting element to the target element
   const loop = () => {
