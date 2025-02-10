@@ -388,7 +388,7 @@
   let targetChangeTime = Date.now();
 
   const highlightingId = 'highlighting-element';
-  const highlightingElement = document.getElementById(highlightingId);
+  let highlightingElement = document.getElementById(highlightingId);
   if (!highlightingElement) {
     highlightingElement = document.createElement('div');
     highlightingElement.id = 'highlighting-element';
